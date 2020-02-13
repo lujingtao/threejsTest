@@ -14,7 +14,7 @@
   </head>
   <body>
     <script src="three.js"></script>
-    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/controls/OrbitControls.js"></script>
+    <script src="OrbitControls.js"></script>
     <script>
       /**
        * 创建场景对象Scene
@@ -46,6 +46,8 @@
 
       //辅助线
       var axisHelper = new THREE.AxesHelper(1400);
+      let gridHelper = new THREE.GridHelper(1400, 60); //辅助网格
+      scene.add(gridHelper)
       axisHelper.position.set(0, 0, 0);
       scene.add(axisHelper);
       /**
@@ -56,9 +58,9 @@
       var width = window.innerWidth; //窗口宽度
       var height = window.innerHeight; //窗口高度
       var k = width / height; //窗口宽高比
-      var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+      var s = 2000; //三维场景显示范围控制系数，系数越大，显示的范围越大
       //创建相机对象
-      var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
+      var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 10000);
       camera.position.set(100, 100, 100); //设置相机位置
       camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
       
