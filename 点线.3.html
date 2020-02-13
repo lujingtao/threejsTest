@@ -1,0 +1,389 @@
+<html>
+  <head>
+    <title>My first three.js app</title>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%
+      }
+    </style>
+  </head>
+  <body>
+    <div class="btns">
+      <button onclick="setViewType('2D')">2D</button>
+      <button onclick="setViewType('25D')">2.5D</button>
+      <button onmousedown="moveCamera('up')">上</button>
+      <button onmousedown="moveCamera('down')">下</button>
+    </div>
+    <script src="three.js"></script>
+    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+      function moveCamera(dir){
+        switch (dir){
+          case "up":
+            camera.rotation.x +=1;
+            break;
+          case "down":
+            camera.rotation.x -=1;
+            break;
+          case "left":
+            camera.position.x -=10;
+            break;
+          case "right":
+            camera.position.x +=10;
+            break;
+        }
+        console.log(camera);
+        render()
+      }
+      
+      let colors = {
+        "总部大楼": "#000",
+        "室外广场": "#000",
+        "楼梯": "#FF6856",
+        "办公室": "#FEFF00",
+        "茶水间": "#0367A3",
+        "会议室": "#FF9862",
+        "扶梯": "#0068D3",
+        "电梯": "#2D9C36",
+        "其他": "#FACF35",
+        "墙": "#b2b2b2",
+        "候梯厅": "#970162",
+        "停车区": "#ccc",
+        "过道": "#ccc",
+        "走道": "#ccc",
+        "花池栏杆": "#aaa",
+        "阳台走道": "#ccc",
+        "合用前室": "#FF009C",
+        "跑步机房": "#8D0004",
+        "健身车室": "#52A8BF",
+        "瑜伽室": "#DBA1B9",
+        "划船器室": "#CEFA4F",
+        "储物间": "#03954C",
+        "空调机房": "#0099CB",
+        "咖啡吧": "#DBDF88",
+        "前室": "#FD5E02",
+        "工具间": "#040005",
+        "配电室": "#A39C68",
+        "水井": "#C0D7C2",
+        "机房": "#BC5326",
+        "试验区配电间": "#8FA49B",
+        "实验区设备间": "#9A9B7B",
+        "花池": "#619D39",
+        "卫生间": "#DF78B0",
+        "文印区": "#AEAD03",
+        "淋浴间": "#A10005",
+        "接待室": "#6A0004",
+        "风井": "#510B03",
+        "排风井": "#6EB7FC",
+        "等候区": "#0797EE",
+        "公共办公区": "#FF4F05",
+        "设备房": "#026465",
+        "制冷机房": "#5FA59D",
+        "排烟井": "#171B62",
+        "文化展示区": "#B1A6AA",
+        "空调水井": "#040005",
+        "办公区": "#B5D2E4",
+        "机器人展示区": "#B5D2E4",
+        "前台": "#0B37CE",
+        "围栏": "#8CA69B",
+        "档案室": "#BC5326",
+      }
+
+      let depths = {
+        "总部大楼": 0,
+        "走道": 0.2,
+        "停车区": 0.3,
+        "候梯厅":0.4,
+        "办公区": 0.4,
+        "室外广场": 0.1,
+        "墙": 5,
+        "其它": 0.5,
+      }
+
+      let noRender = [
+        "总部大楼",
+        "室外广场"
+      ]
+
+      let noTextRender = [
+        "墙",
+        "其他",
+        "围栏",
+        "花池栏杆",
+        "花池",
+        "空调水井",
+        "试验区配电间",
+        "实验区设备间",
+        "总部大楼",
+        "室外广场",
+        "空调机房",
+      ]
+
+      let currentViewType = '25D';
+      let outputNum = 781;
+      let center = lonlatToMercator(113.27498461329591, 22.927387370590512, 0);
+      //中心点偏移，按实际情况写
+      center.x -= 30;
+      center.y -= 150;
+
+      let renderer = creatRender();
+      let scene = new THREE.Scene();
+      let camera = creatCamera();
+      let light = creatLight();
+      let controls = creatControls();
+      let axisHelper = creatAxisHelper();
+      let datas = null;
+      loadDatas();
+
+
+      //创建网格
+      function creatMesh(cdi, type, renderOrder,viewType) {
+        let v2s = getv1s(cdi);
+        //console.log(v2s);
+        let depth = depths[type] == undefined ? depths["其它"] : depths[type];
+        let color = colors[type];
+
+        //创建形状
+        let shape = new THREE.Shape();
+        shape.center = { x: 0, y: 0 };
+        v2s.forEach((item, index) => {
+          index == 0 ? shape.moveTo(item[0], item[1]) : shape.lineTo(item[0], item[1]);
+          shape.center.x += item[0];
+          shape.center.y += item[1];
+        });
+        shape.center.x = shape.center.x / v2s.length;
+        shape.center.y = shape.center.y / v2s.length;
+
+        let geometry = null;
+        let material = null;
+        if(viewType=="2D"){
+          //创建平面
+          geometry = new THREE.ShapeGeometry( shape );
+          material = new THREE.MeshBasicMaterial( { color: color } );
+        }else{
+          //创建拉伸造型
+          geometry = new THREE.ExtrudeGeometry(
+            shape, {
+              depth: depth,
+              bevelEnabled: false //无倒角
+            }
+          );
+
+          material = new THREE.MeshLambertMaterial({
+            color: color,
+          });
+          if(type=="墙"){
+            material.transparent=true;
+            material.opacity=0.5
+          }
+        }
+
+        let mesh = new THREE.Mesh(geometry, material);
+        //mesh.renderOrder = renderOrder; //3d对象渲染顺序
+        mesh.position.z = renderOrder / 10000;
+        //console.log(mesh);
+        scene.add(mesh);
+
+        //添加文字
+        if (noTextRender.indexOf(type) != -1) return;
+        let text = createText(type, 48, 0.025, shape.center.x, shape.center.y, 1);
+        scene.add(text);
+
+      }
+
+      //开始处理数据
+      function init(list,viewType) {
+        console.log(list);
+
+        list.forEach((item, index) => {
+          if (item.outline.planView.geometry == undefined) {
+            console.log(item);
+            return
+          }
+          let geom = item.outline.planView.geometry;
+          let type = item.type;
+          //忽略渲染项目
+          if (noRender.indexOf(type) != -1) return;
+
+          switch (geom.type) {
+            case "Polygon":
+              creatMesh(geom.coordinates[0], type, index,viewType);
+              break;
+            case "MultiPolygon":
+              geom.coordinates[0].forEach(c => {
+                creatMesh(c, type, index,viewType);
+              });
+              break;
+            default:
+              console.log("匹配不到：" + geom.type + "|" + type);
+              break;
+          }
+        });
+        render();
+      }
+
+      //执行渲染操作
+      function render() {
+        console.log(scene.position);
+        console.log(camera.position);
+        renderer.render(scene, camera);
+      }
+
+      //经纬坐标数组转xy数组
+      function getv1s(ary) {
+        let result = [];
+        ary.forEach((item, index) => {
+          let xy = lonlatToTwo(item[0], item[1], 0);
+          result.push(xy);
+        });
+        return result;
+      }
+
+      //经纬转投影xyz
+      function lonlatToMercator(lon, lat, height) {
+        let z = height ? height : 0;
+        let x = (lon / 180.0) * 20037508.3427892;
+        let y = (Math.PI / 180.0) * lat;
+        let tmp = Math.PI / 4.0 + y / 2.0;
+        y = 20037508.3427892 * Math.log(Math.tan(tmp)) / Math.PI;
+        return { x: x, y: y, z: z };
+      }
+
+      //经纬转xy，根据中心点
+      function lonlatToTwo(lon, lat, height) {
+        let z = height ? height : 0;
+        let x = (lon / 180.0) * 20037508.3427892;
+        let y = (Math.PI / 180.0) * lat;
+        let tmp = Math.PI / 4.0 + y / 2.0;
+        y = 20037508.3427892 * Math.log(Math.tan(tmp)) / Math.PI;
+        let result = {
+          x: x - center.x,
+          y: y - center.y,
+          z: z - center.z
+        };
+        return [result.x, -result.y];
+      }
+
+      //创建文字
+      function createText(text, size, scale, x, y, z) {
+        let canvas = document.createElement("canvas");
+        canvas.width = text.length * size;
+        canvas.height = size;
+        let ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#FF0000";
+        ctx.font = size + "px Arial";
+        ctx.fillText(text, 0, 0.875 * size);
+        let texture = new THREE.Texture(canvas);
+        texture.needsUpdate = true;
+        let material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        let geometry = new THREE.PlaneGeometry(canvas.width, canvas.height);
+        let textMesh = new THREE.Mesh(geometry, material);
+        textMesh.scale.set(scale, scale, 1);
+        textMesh.position.set(x, y, z);
+        return textMesh;
+      }
+
+      //创建渲染
+      function creatRender() {
+        let renderer = new THREE.WebGLRenderer({
+          antialias: true, //反锯齿
+          logarithmicDepthBuffer: true ,//深度缓存，true则设置depth越小也有效
+          //alpha:true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x333333, 1); //设置背景颜色
+        document.body.appendChild(renderer.domElement);
+        return renderer;
+      }
+
+      //创建摄像机
+      function creatCamera() {
+        let camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(100, 100, 500);
+        camera.lookAt(0, 0, 0);
+        return camera
+      }
+
+      //光源
+      function creatLight() {
+        let light = new THREE.AmbientLight('#ffffff',1);
+        scene.add(light);
+
+        let directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        directionalLight.position.x = 500;
+        directionalLight.position.y = 500;
+        directionalLight.position.z = 500;
+
+        scene.add(directionalLight);
+        let helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+        scene.add(helper);
+
+        return light;
+      }
+
+      //控制对象
+      function creatControls() {
+        let controls = new THREE.OrbitControls(camera); //创建控件对象
+        console.log(controls);
+        controls.addEventListener('change', render); //监听鼠标、键盘事件
+        //controls.enableZoom=false;
+        return controls;
+      }
+
+      //辅助线
+      function creatAxisHelper() {
+        let axisHelper = new THREE.AxesHelper(1000);
+        axisHelper.position.set(0, 0, 0);
+        scene.add(axisHelper);
+        return axisHelper;
+      }
+
+      //加载数据
+      function loadDatas() {
+        let _datas = [];
+        let ajaxObj = new XMLHttpRequest();
+        ajaxObj.open("GET", "http://hd-map-api.map.bzl.ingress.local/api/area/page?isCurrent=true&pageSize=" +
+          outputNum);
+        ajaxObj.send();
+        ajaxObj.onreadystatechange = function() {
+          if (ajaxObj.readyState == 4 && ajaxObj.status == 200) {
+            _datas = JSON.parse(ajaxObj.responseText);
+            console.log(_datas);
+            
+            if (!_datas.data) return;
+            if (!_datas.data.list || _datas.data.list.length == 0) return;
+            init(_datas.data.list);
+            
+            datas = _datas;
+          }
+        }
+      }
+
+      function setViewType(viewType){
+        if(viewType == currentViewType) return;
+        currentViewType = viewType;
+        scene.dispose();
+        scene = new THREE.Scene();
+        camera = creatCamera();
+        light = creatLight();
+        controls = creatControls();
+        axisHelper = creatAxisHelper();
+        init(datas.data.list,viewType);
+        
+      }
+    </script>
+    <style type="text/css">
+      .btns {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+      }
+    </style>
+  </body>
+</html>
