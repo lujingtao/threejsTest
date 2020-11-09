@@ -75,7 +75,7 @@
 
       let currentViewType = '25D';
       let center = {x:1233516.2839326607,y:-943671.293905388};
-      console.log(center);
+      console.log("中心点：",center);
       var group = new THREE.Group();
       let renderer = creatRender();
       let scene = new THREE.Scene();
@@ -100,7 +100,7 @@
         let depth = depths[type] == undefined ? depths["其它"] : depths[type];
         let color = colors[type];
 
-        console.log(type);
+        console.log("类别：",type);
         //创建形状
         let shape = new THREE.Shape();
         shape.center = { x: 0, y: 0 };
@@ -181,7 +181,7 @@
         //group.rotateX(-270);
         
         scene.add(group);
-        console.log(group);
+        //console.log(group);
         render();
       }
 

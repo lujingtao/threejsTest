@@ -14,24 +14,35 @@
   </head>
   <body>
     <script src="three.js"></script>
-    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/controls/OrbitControls.js"></script>
+    <script src="../ThreeJsOrg/examples/js/controls/OrbitControls.js"></script>
+    
+    
+    <script src="../ThreeJsOrg/examples/js/shaders/Pass.js"></script>
+    <script src="../ThreeJsOrg/examples/js/shaders/CopyShader.js"></script>
+    <script src="../ThreeJsOrg/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="../ThreeJsOrg/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="../ThreeJsOrg/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="../ThreeJsOrg/examples/js/postprocessing/OutlinePass.js"></script>
+    
     <script>
       /**
        * 创建场景对象Scene
        */
       var scene = new THREE.Scene();
+
       /**
        * 创建网格模型
        */
-      // var geometry = new THREE.SphereGeometry(60, 40, 40); //创建一个球体几何对象
+      var geometry = new THREE.SphereGeometry(60, 40, 40); //创建一个球体几何对象
       var geometry = new THREE.BoxGeometry(100, 100, 100); //创建一个立方体几何对象Geometry
       var material = new THREE.MeshLambertMaterial({
         color: 0x0000ff,
         transparent: true,
-        opacity : 0.5
+        opacity : 1
       }); //材质对象Material
       var mesh = new THREE.Mesh(geometry, material); //网格模型对象Mesh
       scene.add(mesh); //网格模型添加到场景中
+      
       /**
        * 光源设置
        */
@@ -42,31 +53,20 @@
       //环境光
       var ambient = new THREE.AmbientLight(0x444444);
       scene.add(ambient);
-      // console.log(scene)
-      // console.log(scene.children)
-
 
       //辅助线
       var axisHelper = new THREE.AxesHelper(1400);
       axisHelper.position.set(0, 0, 0);
       scene.add(axisHelper);
-      /**
-       * 相机设置
-       */
-
 
       var width = window.innerWidth; //窗口宽度
       var height = window.innerHeight; //窗口高度
       var k = width / height; //窗口宽高比
-      var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+      var s = 400; //三维场景显示范围控制系数，系数越大，显示的范围越大
       //创建相机对象
       var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, -100, 1000);
       camera.position.set(100, 100, 100); //设置相机位置
       camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
-
-      //控制对象
-      var controls = new THREE.OrbitControls(camera); //创建控件对象
-      controls.addEventListener('change', render); //监听鼠标、键盘事件
 
       // const helper = new THREE.CameraHelper(camera);
       // scene.add(helper);
@@ -75,46 +75,42 @@
        */
       var renderer = new THREE.WebGLRenderer();
       renderer.setSize(width, height); //设置渲染区域尺寸
-      renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
+      renderer.setClearColor("#666", 1); //设置背景颜色
       document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
 
+      //控制对象
+      var controls = new THREE.OrbitControls(camera, renderer.domElement); //创建控件对象
+      controls.addEventListener('change', render); //监听鼠标、键盘事件
+      
+      useEffectComposer();
 
+      //1、添加 EffectComposer，并添加 outlinePass 特效
+      function useEffectComposer() {
+        var composer = new THREE.EffectComposer(renderer)
+        this.composer = composer
+        var renderPass = new THREE.RenderPass(scene, camera)
+        composer.addPass(renderPass)
 
-//声明raycaster和mouse变量
-    var raycaster = new THREE.Raycaster();
-    var mouse = new THREE.Vector2();
-
-    function onMouseClick( event ) {
-
-        //通过鼠标点击的位置计算出raycaster所需要的点的位置，以屏幕中心为原点，值的范围为-1到1.
-
-        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
-        // 通过鼠标点的位置和当前相机的矩阵计算出raycaster
-        raycaster.setFromCamera( mouse, camera );
-
-        // 获取raycaster直线和所有模型相交的数组集合
-        var intersects = raycaster.intersectObjects( scene.children );
-
-        console.log(intersects);
-
-        //将所有的相交的模型的颜色设置为红色，如果只需要将第一个触发事件，那就数组的第一个模型改变颜色即可
-        if(intersects.length==0) return;
-        for ( var i = 0; i < intersects.length; i++ ) {
-            intersects[ i ].object.material.color.set( 0xff0000 );
-        }
-        render();
-    }
-
-    window.addEventListener( 'mousemove', onMouseClick, false );
-
+        var outlinePass = new THREE.OutlinePass(
+          new THREE.Vector2(width, height),
+          scene,
+          camera
+        )
+        outlinePass.visibleEdgeColor.set('#ff0')
+        outlinePass.hiddenEdgeColor.set('#aaffff')
+        outlinePass.edgeStrength = 5
+        outlinePass.edgeGlow = 1
+        outlinePass.edgeThickness = 3
+        outlinePass.pulsePeriod = 0
+        this.outlinePass = outlinePass
+        composer.addPass(outlinePass)
+      }
 
 
       //执行渲染操作   指定场景、相机作为参数
       function render() {
-        console.log(scene.position);
-        console.log(camera.position);
+        //console.log(scene.position);
+        //console.log(camera.position);
         renderer.render(scene, camera);
       }
       render()
