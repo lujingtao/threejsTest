@@ -26,6 +26,7 @@
       loader.load(
         "data/test.glb",
         function (gltf) {
+          console.log(gltf);
           gltf.scene.name = "3dmodel";
           setContent(gltf.scene);
 
